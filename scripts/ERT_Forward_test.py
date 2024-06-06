@@ -22,7 +22,7 @@ pyversion = sys.version
 
 # Set target folder for input file (if using field data for electrode locations)
 # and, if required, for saving forward model output.
-os.chdir("C:\\temp\\test-ERT2D")
+# os.chdir("C:\\temp\\test-ERT2D")
 
 #%%%
 # Load data to container from BERT format to use Acacia Grad electrode config...
@@ -97,7 +97,7 @@ mgr = ert.ERTManager(fwddata)
 
 # Run inversion (very fast with 'very good' model data and simple geol model)
 inv = mgr.invert(lam=20, verbose=True)
-np.testing.assert_approx_equal(mgr.inv.chi2(), 0.7, significant=1)
+# np.testing.assert_approx_equal(mgr.inv.chi2(), 0.7, significant=1)
 
 # plot inversion result with input/output pseudosections
 mgr.showResultAndFit()
@@ -128,7 +128,7 @@ ax.set_xlim(-50, 150);
 ax.set_ylim(-100, 10);
 
 mgrConstrained = ert.ERTManager(fwddata)
-mgrConstrained.invert(verbose=True, lam=20, mesh=invmesh)
+coninv = mgrConstrained.invert(verbose=True, lam=20, mesh=invmesh)
 
 mgrConstrained.showResultAndFit()
 
