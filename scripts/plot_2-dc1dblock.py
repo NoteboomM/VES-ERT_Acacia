@@ -18,7 +18,7 @@ from pygimli.physics import VESManager
 # %%%
 ## some definitions before (model, data and error)
 ## simulated ab & mn...
-ab2 = np.logspace(1, 3.3, 20)  # AB/2 distance (current electrodes)
+ab2 = np.logspace(0, 3.3, 20)  # AB/2 distance (current electrodes)
 mn2 = ab2/3
 ## ...or examples, in this case from one Puntland line
 # ab2 = np.array([1.5, 2.1, 3., 4.2, 6., 9., 13.5, 20., 20., 30., 30., 45., 66.,
