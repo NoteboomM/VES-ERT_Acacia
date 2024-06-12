@@ -14,7 +14,7 @@ Might be interesting to look into dipping layers, and polygon targets...
 # import useful/necessary packages
 import pygimli as pg
 import numpy as np
-import os, sys
+import sys
 from pygimli.physics import ert
 import pygimli.meshtools as mt
 
@@ -22,25 +22,31 @@ pyversion = sys.version
 
 # Set target folder for input file (if using field data for electrode locations)
 # and, if required, for saving forward model output.
-# os.chdir("C:\\temp\\test-ERT2D")
+datafolder = ".\\exampledata\\Lubango\\"
 
 #%%%
 # Load data to container from BERT format to use Acacia Grad electrode config...
-# data = ert.load("2024-03-07 OPTHOF-ROLL_GradientXL_2.ohm") 
-# scheme = ert.createData(elecs=pg.x(data), schemeName='gr')
+# data = ert.load(datafolder+"2024-03-07 OPTHOF-ROLL_GradientXL_2.ohm") 
+# elecs=pg.x(data)
+# config = 'gr'
 
 # ...or use an automated dip-dip (dd), Wenner (wa), Schlum (slm), P-dip (pd).
 # To get a list of configs recognised by createData, input nonsense schemename,
 # e.g. 'abc'.
 
 # Currently has electrodes every 5m from 0-100m, in a dipole-dipole scheme
-scheme = ert.createData(elecs=np.linspace(start=0, stop=100, num=21),
-                        schemeName='dd')
+elecs=np.linspace(start=0, stop=100, num=21)
+config = 'dd'
+
+scheme = ert.createData(elecs=elecs, schemeName=config)
 
 # Create 'world' with layers, bodies, etc.
 # Currently creates a space from -50m to 150m, with depth 100m, with layers 
 # defined at 2m and 10m depth above a halfspace
-world = mt.createWorld(start=[-50., 0.], end=[150., -100.],
+elecrange = np.max(elecs) - np.min(elecs)
+spacing = (max(elecs) - min(elecs))/(len(elecs) -1)
+world = mt.createWorld(start=[min(elecs)-5*spacing, 0.], 
+                       end=[max(elecs)+5*spacing, -10*spacing],
                        layers=[-2., -10.], worldMarker=True)
 
 """
@@ -66,12 +72,12 @@ for p in scheme.sensors():
 mesh = mt.createMesh(world, quality=34)
 
 # Set resistivities for 2 layers and basement halfspace
-rhomap = [[1,150.],[2,50.],[3,10.]]
+rhomap = [[1,10.],[2,50.],[3,150.]]
 
 # Take a look at the mesh and the resistivity distribution
 ax, _ = pg.show(mesh, data=rhomap, label=pg.unit('resistivity Ohm.m'),
                 showMesh=True, cMap="Spectral_r")
-ax.set_ylim(-25,0)
+ax.set_ylim(-5*spacing,0)
 
 #%%
 # Run forward model with inputs of mesh, electrode scheme, resistivities and noise
