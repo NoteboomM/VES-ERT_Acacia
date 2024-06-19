@@ -38,7 +38,7 @@ datafolder = ".\\exampledata\\Lubango\\"
 elecs=np.linspace(start=0, stop=100, num=21)
 config = 'dd'
 
-scheme = ert.createData(elecs=elecs, schemeName=config)
+scheme = ert.createData(elecs=elecs, schemeName=config, maxSeparation=10)
 
 # Create 'world' with layers, bodies, etc.
 # Currently creates a space from -50m to 150m, with depth 100m, with layers 
@@ -95,6 +95,7 @@ pg.info('Selected data noise %(min/max)', min(fwddata['err'])*100, max(fwddata['
 # show forward model result - apparent resistivity pseudosection
 # ert.show(data)
 ert.show(fwddata)
+# ert.show(fwddata, -fwddata['k'], logScale=True)
 
 #%%
 # Now invert with ERTManager to compare to input model
@@ -102,7 +103,7 @@ ert.show(fwddata)
 mgr = ert.ERTManager(fwddata)
 
 # Run inversion (very fast with 'very good' model data and simple geol model)
-inv = mgr.invert(lam=20, verbose=True)
+inv = mgr.invert(lam=20, verbose=True, zWeight=0.1)
 # np.testing.assert_approx_equal(mgr.inv.chi2(), 0.7, significant=1)
 
 # plot inversion result with input/output pseudosections
