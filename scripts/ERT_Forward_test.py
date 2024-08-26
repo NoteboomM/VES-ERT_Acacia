@@ -47,7 +47,7 @@ elecrange = np.max(elecs) - np.min(elecs)
 spacing = (max(elecs) - min(elecs))/(len(elecs) -1)
 world = mt.createWorld(start=[min(elecs)-5*spacing, 0.], 
                        end=[max(elecs)+5*spacing, -10*spacing],
-                       layers=[-2., -10.], worldMarker=True)
+                       layers=[-5., -20.], worldMarker=True)
 
 """
 Examples of bodies from pyGimli notebook:
@@ -77,7 +77,7 @@ rhomap = [[1,10.],[2,50.],[3,150.]]
 # Take a look at the mesh and the resistivity distribution
 ax, _ = pg.show(mesh, data=rhomap, label=pg.unit('resistivity Ohm.m'),
                 showMesh=True, cMap="Spectral_r")
-ax.set_ylim(-5*spacing,0)
+ax.set_ylim(-10*spacing,0)
 
 #%%
 # Run forward model with inputs of mesh, electrode scheme, resistivities and noise
@@ -107,9 +107,9 @@ inv = mgr.invert(lam=20, verbose=True, zWeight=0.1)
 # np.testing.assert_approx_equal(mgr.inv.chi2(), 0.7, significant=1)
 
 # plot inversion result with input/output pseudosections
-mgr.showResultAndFit()
+mgr.showResultAndFit(cMap="viridis")
 # plot just inversion result with fixed axis limits
-ax, _ = mgr.showResult(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r")
+ax, _ = mgr.showResult(xlabel="x (m)", ylabel="z (m)", cMap="viridis", coverage=1)
 ax.set_xlim(-10,110)
 # ax.set_ylim(-25,0)
 
