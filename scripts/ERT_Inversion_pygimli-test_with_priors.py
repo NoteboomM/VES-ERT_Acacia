@@ -72,10 +72,9 @@ print(data, data.tokenList())
 
 print(data, data.tokenList()) # print summary - good to check # of sensors, measurements and channels
 # plot terrain profile. set_aspect method defines vertical exaggeration
-fig, ax = plt.subplots()
-ax.plot(pg.x(data), pg.y(data), '.-')
-ax.set_aspect(2.0)
-ert.show(data)
+# fig, ax = plt.subplots()
+# ax.plot(pg.x(data), pg.y(data), '.-')
+# ax.set_aspect(2.0)
 
 #%%
 # calculate geometric factors: False=the simple way using formula with a,b,m,n,
@@ -96,8 +95,15 @@ ert.show(data, vals=100*k0/data['k'], label='Topography effect %',
 # calculate resistivity from resistance (v/i) channel and calculated geometric factor, then plot
 # but for Terrameter LS file, rhoa already calculated, and with no terrain, no new
 # k necessary
-# data['rhoa'] = data['r'] * data['k']
-ert.show(data)
+data['rhoa_calc'] = data['r'] * data['k']
+
+# want to start labelling and saving some of these plots...but I can't make it work so far!
+# fig = pg.plt.figure()
+# fig.suptitle('Observed apparent resistivity') # Set title
+ert.show(data, data['rhoa'])
+fig = plt.gcf()
+fig.suptitle("Observed Apparent Resistivity")
+# fig.savefig('OptHof_ObsAppRes.png', dpi=200)
 
 #%% 
 """
@@ -360,6 +366,10 @@ ax.grid(True)
 ax.legend()
 
 """
+
+fig.suptitle(sitecode) # Set title
+fig.savefig(outname+'.png', dpi=200)
+
 
 eleclist = list(set(pg.x(data)))
 electrodes = np.zeros((len(pg.x(data)),3), dtype=float)

@@ -112,7 +112,7 @@ Set working directory, load files, extract inputs for inversion and convert to a
 
 """
 # set data/output folder
-os.chdir("C:/Users/matthew.noteboom/OneDrive - Acacia Water/Angola-Cunene2023/VES_DATA")
+os.chdir("C:/temp")
 # look for observation files
 filelist = glob("V*.stg")
 

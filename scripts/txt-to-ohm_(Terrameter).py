@@ -15,12 +15,12 @@ import os,sys
 pyversion = sys.version
 
 # change to working directory
-os.chdir("C:/temp/test-ERT2D")
+os.chdir("C:/Temp/211269_OptHof_MSNTesting/2024-03-07 OPTHOF-ROLL_LS214100268_19-21-11")
 
 #%%
 # open and load stg file; if required later can maybe improve with a prompt or listing?
 # with open("DD4384(1-6).stg", 'r') as stgfile:
-with open("2024-03-07 OPTHOF-ROLL_GradientXL_2.txt", 'r') as lsfile:
+with open("2024-03-07 OPTHOF-ROLL_GradientXL_2_edited.txt", 'r') as lsfile:
     lsdata = lsfile.readlines()[1:]
 # open and load terrain file. Left this in from another script in case we have 
 # something on Terrameter surveys, but it's probably not very often important in NL!
@@ -117,5 +117,5 @@ for x in eleclist:
 outdata = elecblock + datablock
 
 # write to output file
-with open("2024-03-07 OPTHOF-ROLL_GradientXL_2.ohm", 'w') as outfile:
+with open("2024-03-07 OPTHOF-ROLL_GradientXL_2_edited.ohm", 'w') as outfile:
     outfile.write(outdata)

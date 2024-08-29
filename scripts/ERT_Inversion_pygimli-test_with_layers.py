@@ -31,6 +31,8 @@ import pygimli.meshtools as mt
 
 pyversion = sys.version
 
+# plt.rcParams.update(plt.rcParamsDefault)
+
 # This version works with a temporary testing folder, but can be changed to any path
 # (although eventually there is probably a length limit).
 os.chdir("C:\\Temp\\211269_OptHof_MSNTesting\\2024-03-07 OPTHOF-ROLL_LS214100268_19-21-11")
@@ -50,7 +52,7 @@ absence of that, a decay check would be good for QC.
 
 """
 
-data = ert.load("2024-03-07 OPTHOF-ROLL_GradientXL_2.ohm") # Load data to container from BERT format
+data = ert.load("2024-03-07 OPTHOF-ROLL_GradientXL_2_edited.ohm") # Load data to container from BERT format
 # data = ert.load("2022-11-15 ZTT BRON21 T0_Gradient_697i_1933p_Acacia_1.ohm") # Load data to container from BERT format
 terrain = pg.z(data) # store the terrain information which gets moved to 'y' axis during inversion
 
@@ -65,9 +67,9 @@ print(data, data.tokenList())
 
 print(data, data.tokenList()) # print summary - good to check # of sensors, measurements and channels
 # plot terrain profile. set_aspect method defines vertical exaggeration
-fig, ax = plt.subplots()
-ax.plot(pg.x(data), pg.y(data), '.-')
-ax.set_aspect(2.0)
+# fig, ax = plt.subplots()
+# ax.plot(pg.x(data), pg.y(data), '.-')
+# ax.set_aspect(2.0)
 
 #%%
 # calculate geometric factors: False=the simple way using formula with a,b,m,n,
@@ -88,8 +90,19 @@ ert.show(data, vals=100*k0/data['k'], label='Topography effect %',
 # calculate resistivity from resistance (v/i) channel and calculated geometric factor, then plot
 # but for Terrameter LS file, rhoa already calculated, and with no terrain, no new
 # k necessary
-data['rhoa'] = data['r'] * data['k']
-ert.show(data)
+data['rhoa_calc'] = data['r'] * data['k']
+
+# want to start labelling and saving some of these plots...but I can't make it work so far!
+# fig = pg.plt.figure()
+# fig.suptitle('Observed apparent resistivity') # Set title
+ert.show(data, data['rhoa'])
+fig = plt.gcf()
+fig.suptitle("Observed Apparent Resistivity")
+fig.savefig('OptHof_ObsAppRes.png', dpi=200)
+
+plotkw = dict(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r", cMin=0.2, cMax=200)
+
+invkw = dict(data=data, verbose=True, lam=2, zWeight=0.5, robust=False) # lambda is a smoothness constraint, lower zweight emphasises layering
 
 #%% 
 """
@@ -144,13 +157,7 @@ ert.show(data, data['err']*100, label="error [%]", logScale=False)
 # call the ERTManager class
 mgr = ert.ERTManager(data)
 # run the inversion, with some settings for mesh, lambda, smoothness
-mgr.invert(verbose=True,
-           #paraDX=0.3, paraMaxCellSize=10, paraDepth=20, 
-           quality=34,
-           size=1.,
-           lam=2,
-           zWeight=0.1, # run inversion: lambda is a smoothness constraint, lower zweight emphasises layering
-           robust=False)
+mgr.invert(quality=34, size=1., **invkw)
 
 #%%
 # Now show the result! Use coverage=1 to shut off fading; also, there's probably 
@@ -160,6 +167,10 @@ mgr.invert(verbose=True,
 # plot comparison pseudosections of data & response of inverted model. If inversion
 # worked well, they're indistinguishable. Misfit more useful...
 mgr.showFit()
+# fig = plt.gcf()
+# fig.suptitle("Comparison of data & inversion response")
+# fig.savefig('OptHof_ObsAppRes.png', dpi=200)
+
 data['misfit'] = pg.log(mgr.inv.response / mgr.data["rhoa"]) / data["err"]
 pg.show(data, data['misfit'], cMap="bwr", cMin = -100, cMax = 100,
         label='misfit: response/data/err',
@@ -168,99 +179,60 @@ pg.show(data, data['misfit'], cMap="bwr", cMin = -100, cMax = 100,
 # plot inverted section, can change cMap from default 'Spectral_r' (maybe test 
 # viridis or similar for accessibility), set colour max/min, probably specify log 
 # scale, and toy with coverage?
-ax, _ = mgr.showResult(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r", cMin=0.2, cMax=200,
-                       label='Apparent Resistivity ohm.m, zwt=0.1, lambda=2, NOT robust')#, coverage=.5) # , cMap="viridis") #, cMap="Spectral_r"); #cMin=1, cMax=500, 
-ax.set_ylim(-16,0)
+ax, _ = mgr.showResult(**plotkw)
+                       # label='Apparent Resistivity ohm.m, zwt=0.1, lambda=2, NOT robust')#, coverage=.5) # , cMap="viridis") #, cMap="Spectral_r"); #cMin=1, cMax=500, 
+ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
-
-# want to set figure size, but ylim and figsize seem to conflict...
-# ax.figsize(5,5) # settings for x, y limits and some additional x-axis ticks.
-
-# ax.set_xlim(0,820)
-# ax.set_xticks(np.arange(0, 820.1, 50), minor=True) # 50m spaced 'minor' ticks along x
+fig = plt.gcf()
+fig.suptitle("Inverted Resistivity model, zwt=0.5, lambda=2, NOT robust", y=0.8)
+fig.savefig('Unconstrained_Inversion.png', dpi=200)
 
 #%%
 
 # A little tester here using a manually created mesh with lines to constrain 
 eleclist = list(set(pg.x(data)))
 electrodes = np.zeros((len(pg.x(data)),3), dtype=float)
-for n,e in enumerate(eleclist):
-    electrodes[n] = [e, 0., 0.]
+for n,e in enumerate(eleclist): electrodes[n] = [e, 0., 0.]
     
-spacing = 2.
+# spacing = 2.
 
-world = mt.createWorld(start=[min(pg.x(data))-5*spacing, 0.], 
-                       end=[max(pg.x(data))+5*spacing, -10*spacing],
-                       worldMarker=True)
-pg.show(world)
+world = mt.createWorld(start=[-50, 0.], end=[190, -50], worldMarker=True)
+# pg.show(world)
 
-line1 = mt.createLine(start=[min(pg.x(data))-4*spacing, -1],
-                                end=[max(pg.x(data))+4*spacing, -1],
-                                marker=2) # marker>0 means it functions as a constraint
-line2 = mt.createLine(start=[min(pg.x(data))-4*spacing, -13],
-                                end=[max(pg.x(data))+4*spacing, -13],
-                                marker=3) # marker>0 means it functions as a constraint
+line1 = mt.createLine(start=[25, -1], end=[140, -1], marker=2) # marker>0 means it functions as a constraint
+
+line2 = mt.createLine(start=[25, -13], end=[140, -13], marker=3) # marker>0 means it functions as a constraint
 
 world += line1 + line2
 
 pg.show(world)
 
-for p in electrodes:
-    world.createNode(p)
+for p in electrodes: world.createNode(p)
 
-mesh = pg.meshtools.createMesh(world, quality=34, size=0.5)
+mesh = pg.meshtools.createMesh(world, quality=34, size=1)
 
 ax, _ = pg.show(mesh)
 # ax.set_xlim(-20, 150);
 # ax.set_ylim(-100, 10);
+fig = plt.gcf()
+fig.suptitle("Custom world & mesh for Op 't Hof inversion", y=0.7)
+fig.savefig('LayerMesh.png', dpi=200)
 
 mgrConstrained = ert.ERTManager()
-mgrConstrained.invert(data=data,
-                      verbose=True, 
-                      lam=10, 
-                      mesh=mesh, 
-                      zWeight=0.2, 
-                      robust=True)
+mgrConstrained.invert(mesh=mesh, **invkw)
 
-ax, _ = mgrConstrained.showResult(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r", cMin=0.2, cMax=200,
-                       label='Apparent Resistivity ohm.m, zwt=0.2, lambda=10, robust');
+mgrConstrained.showFit()
+
+ax, _ = mgrConstrained.showResult(**plotkw)
+                       # label='Apparent Resistivity ohm.m, zwt=0.2, lambda=10, robust');
 ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
-
+fig = plt.gcf()
+fig.suptitle("Inverted Resistivity model, zwt=0.5, lambda=2, NOT robust", y=0.8)
+fig.savefig('Inversion_with_layer_boundaries.png', dpi=200)
 
 misfit_Const = pg.log(mgrConstrained.inv.response / mgr.data["rhoa"]) / data["err"]
-pg.show(data, misfit_Const, cMap="bwr", cMin=-50, cMax=50, label='misfit: response/data/err')
+pg.show(data, misfit_Const, cMap="bwr", cMin=-100, cMax=100, label='misfit: response/data/err')
 
-"""
+#%%
 
-eleclist = list(set(pg.x(data)))
-electrodes = np.zeros((len(pg.x(data)),3), dtype=float)
-for n,e in enumerate(eleclist):
-    electrodes[n] = [e, 0., 0.]
-
-# create 'world' in which we'll create a mesh and run inversion
-spacing = 2.
-
-world = mt.createWorld(start=[min(electrodes)-5*spacing, 0.], 
-                       end=[max(electrodes)+5*spacing, -10*spacing],
-                       worldMarker=True)
-pg.show(world)
-
-line1 = mt.createLine(start=[min(electrodes)-4*spacing, -1],
-                                end=[max(electrodes)+4*spacing, -1],
-                                marker=2) # marker>0 means it functions as a constraint
-line2 = mt.createLine(start=[min(electrodes)-4*spacing, -13],
-                                end=[max(electrodes)+4*spacing, -13],
-                                marker=3) # marker>0 means it functions as a constraint
-
-world += line1 + line2
-
-pg.show(world)
-
-for p in electrodes:
-    world.createNode(p)
-    # world.createNode(p - [0, 0.5])
-
-invmesh = mt.createMesh(world, quality=34)
-ax, _ = pg.show(invmesh)
-"""
