@@ -17,6 +17,7 @@ least with the Lubango data requires some QC on spurious measurements (see below
 
 Also tested with .ohm file converted from Acacia Terrameter .txt file.
 
+August 2024 - testing with layer constraints
 
 """
 # import useful/necessary packages

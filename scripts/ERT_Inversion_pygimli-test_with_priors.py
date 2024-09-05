@@ -58,17 +58,8 @@ data = ert.load("2024-03-07 OPTHOF-ROLL_GradientXL_2.ohm") # Load data to contai
 # data = ert.load("2022-11-15 ZTT BRON21 T0_Gradient_697i_1933p_Acacia_1.ohm") # Load data to container from BERT format
 terrain = pg.z(data) # store the terrain information which gets moved to 'y' axis during inversion
 
+# load the table of estimated/measured layers & properties
 prior = pd.read_csv("layers.txt", sep = "\\s+")#, header = 0)
-# prior['x'] = 100
-
-"""
-Alternatively, with thanks to Thomas Gunther, use pybert to import directly from STG file,
-but then we need to load the trn file separately (which is not coded as of 27/3/2024):
-import pybert as pb
-data = pb.importData("???.stg")
-print(data, data.tokenList())
-
-"""
 
 print(data, data.tokenList()) # print summary - good to check # of sensors, measurements and channels
 # plot terrain profile. set_aspect method defines vertical exaggeration
@@ -103,7 +94,11 @@ data['rhoa_calc'] = data['r'] * data['k']
 ert.show(data, data['rhoa'])
 fig = plt.gcf()
 fig.suptitle("Observed Apparent Resistivity")
-# fig.savefig('OptHof_ObsAppRes.png', dpi=200)
+fig.savefig('OptHof_Roll_ObsAppRes.png', dpi=200)
+
+plotkw = dict(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r", cMin=0.2, cMax=200, logScale=True)
+
+invkw = dict(data=data, verbose=True, lam=2, zWeight=0.5, robust=True) # lambda is a smoothness constraint, lower zweight emphasises layering
 
 #%% 
 """
@@ -158,22 +153,17 @@ ert.show(data, data['err']*100, label="error [%]", logScale=False)
 # call the ERTManager class
 mgr = ert.ERTManager(data)
 # run the inversion, with some settings for mesh, lambda, smoothness
-mgr.invert(verbose=True,
-           #paraDX=0.3, paraMaxCellSize=10, paraDepth=20, 
-           quality=34,
-           size=1.,
-           lam=20,
-           zWeight=0.5, # run inversion: lambda is a smoothness constraint, lower zweight emphasises layering
-           robust=False)
+mgr.invert(quality=34, size=1., **invkw)
 
 #%%
-# Now show the result! Use coverage=1 to shut off fading; also, there's probably 
-# a matplotlib method I haven't found yet for adding a title. Labelling the colour
-# bar does some of that job though.
 
 # plot comparison pseudosections of data & response of inverted model. If inversion
 # worked well, they're indistinguishable. Misfit more useful...
 mgr.showFit()
+# fig = plt.gcf()
+# fig.suptitle("Comparison of data & inversion response")
+# fig.savefig('OptHof_ObsAppRes.png', dpi=200)
+
 data['misfit'] = pg.log(mgr.inv.response / mgr.data["rhoa"]) / data["err"]
 pg.show(data, data['misfit'], cMap="bwr", cMin = -100, cMax = 100,
         label='misfit: response/data/err',
@@ -182,38 +172,28 @@ pg.show(data, data['misfit'], cMap="bwr", cMin = -100, cMax = 100,
 # plot inverted section, can change cMap from default 'Spectral_r' (maybe test 
 # viridis or similar for accessibility), set colour max/min, probably specify log 
 # scale, and toy with coverage?
-ax, _ = mgr.showResult(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r", cMin=0.2, cMax=200,
-                       label='Apparent Resistivity ohm.m, zwt=0.5, lambda=20, NOT robust')#, coverage=.5) # , cMap="viridis") #, cMap="Spectral_r"); #cMin=1, cMax=500, 
-ax.set_ylim(-16,0)
+ax, _ = mgr.showResult(**plotkw)
+                       # label='Apparent Resistivity ohm.m, zwt=0.1, lambda=2, NOT robust')#, coverage=.5) # , cMap="viridis") #, cMap="Spectral_r"); #cMin=1, cMax=500, 
+ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
-
-# want to set figure size, but ylim and figsize seem to conflict...
-# ax.figsize(5,5) # settings for x, y limits and some additional x-axis ticks.
-
-# ax.set_xlim(0,820)
-# ax.set_xticks(np.arange(0, 820.1, 50), minor=True) # 50m spaced 'minor' ticks along x
+ax.grid()
+fig = plt.gcf()
+fig.suptitle("Inverted Resistivity model, zwt=0.5, lambda=2, NOT robust", y=0.8)
+fig.savefig('Unconstrained_Inversion.png', dpi=200)
 
 #%%
 
-# A little tester here using a manually created mesh with lines to constrain 
-eleclist = list(set(pg.x(data)))
-electrodes = np.zeros((len(pg.x(data)),2), dtype=float)
-for n,e in enumerate(eleclist):
-    electrodes[n] = [e, 0.]#, 0.]
-    
-spacing = 2.
+# A little tester here using a manually created mesh with lines to encourage a 
+# layered earth model. Create a 'world' that's more extensive than the area
+# of interest/surveyed, then add two lines. In this case starting x=25 due to 
+# feature near the beginning of the line that doesn't look like layered earth.
 
-world = mt.createWorld(start=[min(pg.x(data))-5*spacing, 0.], 
-                       end=[max(pg.x(data))+5*spacing, -10*spacing],
-                       worldMarker=True)
-pg.show(world)
+world = mt.createWorld(start=[-50, 0.], end=[190, -50], worldMarker=True)
+# pg.show(world)
 
-line1 = mt.createLine(start=[min(pg.x(data))-4*spacing, -1],
-                                end=[max(pg.x(data))+4*spacing, -1],
-                                marker=2) # marker>0 means it functions as a constraint
-line2 = mt.createLine(start=[min(pg.x(data))-4*spacing, -13],
-                                end=[max(pg.x(data))+4*spacing, -13],
-                                marker=3) # marker>0 means it functions as a constraint
+line1 = mt.createLine(start=[25, -1], end=[140, -1], marker=2) # marker>0 means it functions as a constraint
+
+line2 = mt.createLine(start=[25, -10], end=[140, -10], marker=3) # marker>0 means it functions as a constraint
 
 world += line1 + line2
 
@@ -221,78 +201,116 @@ pg.show(world)
 
 #%%
 
-for p in electrodes:
-    world.createNode(p)
-    world.createNode(p -[0, 0.1])
+# Load up the list of electrode locations and add nodes to the 'world'...
+eleclist = list(set(pg.x(data)))
+electrodes = np.zeros((len(pg.x(data)),3), dtype=float)
+for n,e in enumerate(eleclist): electrodes[n] = [e, 0., 0.]
 
+for p in electrodes: 
+    world.createNode(p)
+    world.createNode(p -[0, 0.1, 0])
+
+# ...then create and display a mesh from the world with lines and nodes.
 mesh = pg.meshtools.createMesh(world, quality=34, size=1.)
 
 ax, _ = pg.show(mesh)
-# ax.set_xlim(-20, 150);
-# ax.set_ylim(-100, 10);
-#%%
-mgrConstrained = ert.ERTManager()
-mgrConstrained.invert(data=data,
-                      verbose=True, 
-                      lam=20, 
-                      mesh=mesh, 
-                      zWeight=0.5, 
-                      robust=False)
-
-#%%
-ax, _ = mgrConstrained.showResult(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r", cMin=0.2, cMax=200,
-                       label='Apparent Resistivity ohm.m, zwt=0.5, lambda=20, robust');
-ax.set_ylim(-16,0)
+ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
+fig = plt.gcf()
+fig.suptitle("Custom world & mesh for Op 't Hof inversion", y=0.7)
+fig.savefig('LayerMesh.png', dpi=200)
 
+#%%
+# Run the inversion on the 'layered' mesh
+mgrlayers = ert.ERTManager()
+mgrlayers.invert(mesh=mesh, **invkw)
 
-misfit_Const = pg.log(mgrConstrained.inv.response / mgr.data["rhoa"]) / data["err"]
-pg.show(data, misfit_Const, cMap="bwr", cMin=-50, cMax=50, label='misfit: response/data/err')
+#%%
+
+# View results of layered inversion
+mgrlayers.showFit()
+
+ax, _ = mgrlayers.showResult(**plotkw)
+                       # label='Apparent Resistivity ohm.m, zwt=0.2, lambda=10, robust');
+ax.set_ylim(-25,0)
+ax.set_xlim(0,140)
+ax.grid()
+fig = plt.gcf()
+fig.suptitle("Inverted Resistivity model, zwt=0.5, lambda=2, NOT robust", y=0.8)
+fig.savefig('Inversion_with_layer_boundaries.png', dpi=200)
+
+misfit_layers = pg.log(mgrlayers.inv.response / mgr.data["rhoa"]) / data["err"]
+pg.show(data, misfit_layers, cMap="bwr", cMin=-100, cMax=100, label='misfit: response/data/err')
 
 #%%
 """
 Now...let's try using the "prior" data...
+This is adapted, with very little change, from the plot_5_ert_with_priors 
+example from the pyGimli team.
 
 """
-kw = dict(cMin=0.2, cMax=200, logScale=True, cMap="Spectral_r", 
-          xlabel="x (m)", ylabel="z (m)")
+# replaced by plotkw earlier
+# kw = dict(cMin=0.2, cMax=200, logScale=True, cMap="Spectral_r", 
+#           xlabel="x (m)", ylabel="z (m)")
 
+# Split up layer data table
 x,z,r = prior['x'], prior['z'], prior['r']
 
-ax, cb = mgr.showResult(**kw)
+# display earlier unconstrained inversion result with column of layer data
+ax, cb = mgr.showResult(**plotkw)
 zz = np.abs(z)
 iz = np.argsort(z)
 dz = np.diff(zz[iz])
 thk = np.hstack([dz, dz[-1]])
 ztop = -zz[iz[0]] - dz[0]/2
-colkw = dict(x=x[0], val=r[iz], thk=thk, width=4, ztopo=ztop)
-draw1DColumn(ax, **colkw, **kw)
+colkw = dict(x=x[0], val=r[iz], thk=thk, width=3, ztopo=ztop)
+draw1DColumn(ax, **colkw, **plotkw)
 ax.grid(True)
-ax.set_ylim(-20,0)
+ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
+fig = plt.gcf()
+fig.suptitle("Inverted Resistivity model, unconstrained, with a priori column", y=0.8)
+fig.savefig('Unconstrained_Inversion+apriori.png', dpi=200)
 
+
+# We want to extract the resistivity from the mesh at the points where 
+# the prior data are available. To this end, we create a list of points
+# (pg.Pos class) and use a forward operator that picks the values from the
+# model vector according to the cell where each point is located. (See the 
+# regularization tutorial for details about that.)
 posVec = [pg.Pos(pos) for pos in zip(x, z)]
 para = pg.Mesh(mgr.paraDomain)  # make a copy
 para.setCellMarkers(pg.IVector(para.cellCount()))
 fopDP = PriorModelling(para, posVec)
 
+# Now use that forward operator to extract, store and plot the model values
+# compared to the a priori values
 fig, ax = plt.subplots()
-ax.semilogx(r, z, label="borehole")
+ax.semilogx(r, z, label="a priori")
 resSmooth = fopDP(mgr.model)
-ax.semilogx(resSmooth, z, label="ERT")
+ax.semilogx(resSmooth, z, label="ERT smooth")
 ax.set_xlabel(r"$\rho$ ($\Omega$m)")
 ax.set_ylabel("depth (m)")
 ax.grid(True)
 ax.legend()
+fig = plt.gcf()
+fig.suptitle("Res-depth profile, unconstrained inversion and a priori data")
+fig.savefig('Res-depth_ERTSmooth+apriori.png', dpi=200)
 
+# "As alternative to smoothness, we can use a geostatistic model. The 
+# vertical range can be well estimated from the DP data using a variogram 
+# analysis, we guess 8m. For the horizontal one, we can only guess a ten 
+# times higher value.
 mgr.inv.setRegularization(2, correlationLengths=[40, 4])
 mgr.invert()
-ax, cb = mgr.showResult(**kw)
+
+ax, cb = mgr.showResult(**plotkw)
 ax.set_ylim(-20,0)
 ax.set_xlim(0,140)
-draw1DColumn(ax, **colkw, **kw)
+draw1DColumn(ax, **colkw, **plotkw)
 resGeo = fopDP(mgr.model)
 
+# Plot compare 'ground truth' with different inversions so far...
 fig, ax = plt.subplots()
 ax.semilogx(r, z, label="borehole")
 ax.semilogx(resSmooth, z, label="ERT smooth")
@@ -303,6 +321,14 @@ ax.set_ylabel("depth (m)")
 ax.grid()
 ax.legend()
 
+# Only shows subtle changes. An alternative is using the interfaces as
+# constraints as shown earlier. However, we really want to use the 'ground
+# truth' data as inputs for inversion. This is easily accomplished by taking 
+# the mapping operator that we already use for interpolation as a forward 
+# operator.
+# 
+# We set up an inversion with this mesh, logarithmic transformations and 
+# invert the model.
 inv = pg.Inversion(fop=fopDP, verbose=True)
 inv.mesh = para
 tLog = pg.trans.TransLog()
@@ -310,20 +336,28 @@ inv.modelTrans = tLog
 inv.dataTrans = tLog
 inv.setRegularization(correlationLengths=[40, 4])
 model = inv.run(r, relativeError=0.2)
-ax, cb = pg.show(para, model, **kw)
-ax.set_ylim(-20,0)
+ax, cb = pg.show(para, model, **plotkw)
+ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
-draw1DColumn(ax, **colkw, **kw)
+draw1DColumn(ax, **colkw, **plotkw)
 
+# We now use the framework JointModelling to combine the ERT and the DP 
+# forward operators. So we set up a new ERT modelling operator and join it 
+# with fopDP.
 fopJoint = JointModelling([mgr.fop, fopDP])
 # fopJoint.setMesh(para)
 fopJoint.setData([data, pg.Vector(r)])  # needs to have .size() attribute! (?)
+
+# We first test the joint forward operator. We create a modelling vector of 
+# constant resistivity and distribute the model response into the two parts 
+# that can be looked at individually.
 model = pg.Vector(para.cellCount(), 100)
 response = fopJoint(model)
 respERT = response[:data.size()]
 respDP = response[data.size():]
 print(respDP)
 
+# The Jacobian can be created and looked up by (wish I knew what it meant!)
 fopJoint.createJacobian(model)  # works
 J = fopJoint.jacobian()
 print(type(J))  # wrong type
@@ -333,6 +367,9 @@ ax, cb = pg.show(J.mat(1), markersize=4)
 
 #%%%
 
+# For the joint inversion, concatenate the data and error vectors, create 
+# a new inversion instance, set logarithmic transformations and run the 
+# inversion.
 dataVec = np.concatenate((data["rhoa"], r))
 errorVec = np.concatenate((data["err"], np.ones_like(r)*0.2))
 inv = pg.Inversion(fop=fopJoint, verbose=True)
@@ -340,30 +377,38 @@ transLog = pg.trans.TransLog()
 inv.modelTrans = transLog
 inv.dataTrans = transLog
 inv.run(dataVec, errorVec, startModel=model)
-ax, cb = pg.show(para, inv.model, **kw)
-draw1DColumn(ax, **colkw, **kw)
-ax.set_ylim(-20,0)
+ax, cb = pg.show(para, inv.model, **plotkw)
+draw1DColumn(ax, **colkw, **plotkw)
+ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
 
+# MAYBE there's some improvement? Hard to be sure. Next use geostatistics to
+# extend the influence of the hole data.
 inv.setRegularization(2, correlationLengths=[40, 4])
 model = inv.run(dataVec, errorVec, startModel=model)
-ax, cb = pg.show(para, model, **kw)
-draw1DColumn(ax, **colkw, **kw)
-ax.set_ylim(-20,0)
+ax, cb = pg.show(para, model, **plotkw)
+draw1DColumn(ax, **colkw, **plotkw)
+ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
 
+# We split the model response in the ERT part and the prior data part.
+# The first is shown as misfit.
 respERT = inv.response[:data.size()]
 misfit = - respERT / data["rhoa"] * 100 + 100
 ax, cb = ert.show(data, misfit, cMap="bwr", cMin=-5, cMax=5)
 
+# The second is shown as a depth profile.
 respDP = inv.response[data.size():]
 fig, ax = plt.subplots()
 ax.semilogx(r, z, label="borehole")
-# resMesh = pg.interpolate(srcMesh=para, inVec=inv.model, destPos=posVec)
-# ax.semilogx(resMesh, z, label="ERT+DP")
 ax.semilogx(respDP, z, label="response")
-ax.grid(True)
+ax.semilogx(resSmooth, z, label="ERT smooth")
+ax.semilogx(resGeo, z, label="ERT geostat")
+ax.set_xlabel(r"$\rho$ ($\Omega$m)")
+ax.set_ylabel("depth (m)")
+ax.grid()
 ax.legend()
+
 
 """
 
