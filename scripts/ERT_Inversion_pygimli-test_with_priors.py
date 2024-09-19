@@ -92,7 +92,8 @@ data['rhoa_calc'] = data['r'] * data['k']
 # fig = pg.plt.figure()
 # fig.suptitle('Observed apparent resistivity') # Set title
 ert.show(data, data['rhoa'])
-fig = plt.gcf()
+ert.show(data, data['rhoa_calc'])
+ig = plt.gcf()
 fig.suptitle("Observed Apparent Resistivity")
 fig.savefig('OptHof_Roll_ObsAppRes.png', dpi=200)
 
