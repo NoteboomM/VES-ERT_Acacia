@@ -67,7 +67,7 @@ def vesinvert(mn2, ab2, rho, err, layers, startmod, sitecode):
     maxres = max(list(ves.model[layers-1:]))
     
     # calculate RMS and RMS% from observations and forward-modelled response of layered-earth model
-    rmse = np.sqrt(np.mean(np.square(ves.inv.response - rho)))
+    # rmse = np.sqrt(np.mean(np.square(ves.inv.response - rho)))
     rmspe = 100 * np.sqrt(np.mean(np.square(ves.inv.response - rho)))/np.mean(ves.inv.response)
 
     # print(rmse)
