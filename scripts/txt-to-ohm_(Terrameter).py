@@ -3,43 +3,52 @@
 Created on Thu Mar 21 09:53:18 2024
 
 @author: matthew.noteboom
+Last update: 2024/09/26
 
-Routine to convert stg files to .ohm files (from the BERT working group:
-http://resistivity.net/bert/data_format.html ) for the Lubango survey. Should be 
-able to operate with minimal changes for any stg data files.
+Routine to convert Terrameter txt file(s) to .ohm files (from the BERT working group:
+http://resistivity.net/bert/data_format.html ) for processing with other
+pyGIMLi scripts & notebooks. Limited testing, but as long as Terrameter outputs
+are fairly consistent format from one project to another, it should be stable.
 
 """
 #%%
 import os,sys
-# store version for reference (habit - sometimes useful for troubleshooting)
+## store version for reference (habit - sometimes useful for troubleshooting)
 pyversion = sys.version
 
-# change to working directory
+## change to working directory
 os.chdir("C:/Temp/211269_OptHof_MSNTesting/2024-03-07 OPTHOF-ROLL_LS214100268_19-21-11")
 
 #%%
-# open and load stg file; if required later can maybe improve with a prompt or listing?
-# with open("DD4384(1-6).stg", 'r') as stgfile:
+# open and load txt file; if required later can maybe improve with a prompt or listing?
+
 with open("2024-03-07 OPTHOF-ROLL_GradientXL_2_edited.txt", 'r') as lsfile:
+    # Check the line index number in brackets in next line. This file has data from line 2,
+    # so we load 1 onwards (first line is zero). But other example file from Op 't Hof 2024
+    # only has data from line 224 onwards, so we would need lsdata = lsfile.readlines()[223:]
     lsdata = lsfile.readlines()[1:]
-# open and load terrain file. Left this in from another script in case we have 
-# something on Terrameter surveys, but it's probably not very often important in NL!
-# terrain can influence geometric factor(s) relative to simple analytic calc.
+
+## open and load terrain file. I left this in from another script in case we have 
+## something on Terrameter surveys, but it's probably not very often important in NL!
+## Terrain can influence geometric factor(s) relative to simple analytic calculation
+## but the effect is subtle on flat/gentle terrain
+
 # with open("ALT#5-1.trn", 'r') as trnfile:
 #     trndata = trnfile.readlines()[3:]
 
-# load terrain data into dictionary to later call to build electrode location block of output
+## load terrain data into dictionary to later call to build electrode location block of output
 # trndict = {}
 # for line in trndata:
 #     x = line.split()[0]
 #     z = line.split()[1]
 #     trndict[x] = z
 
-# Simple approach for the number of measurements 
+## Simple approach for the number of measurements, assuming no 'footer' in the file
+## after the recorded data.
 numstations = len(lsdata)
 
-# initialise output data block with number of stations and channel labels.
-# Leaving old structure in place to handle IP if/when it happens
+## initialise output data block with number of stations and channel labels.
+## Leaving old structure in place to handle IP if/when it happens
 # if "IP" in stgdata[0]:
 #     datablock = str(numstations) + "\n# a b m n r ip/ms err/%\n"
 # then for files without IP data:
