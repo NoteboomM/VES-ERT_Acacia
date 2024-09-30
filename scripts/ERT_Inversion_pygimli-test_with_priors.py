@@ -54,7 +54,7 @@ absence of that, a decay check would be good for QC.
 
 """
 
-data = ert.load("2024-03-07 OPTHOF-ROLL_GradientXL_2.ohm") # Load data to container from BERT format
+data = ert.load("2024-03-07 OPTHOF-ROLL_GradientXL_2_edited.ohm") # Load data to container from BERT format
 # data = ert.load("2022-11-15 ZTT BRON21 T0_Gradient_697i_1933p_Acacia_1.ohm") # Load data to container from BERT format
 terrain = pg.z(data) # store the terrain information which gets moved to 'y' axis during inversion
 
@@ -74,32 +74,31 @@ print(data, data.tokenList()) # print summary - good to check # of sensors, meas
 
 # Note: Terrameter examples have no terrain(?)
 data['k'] = ert.createGeometricFactors(data, numerical=False)
-k0 = ert.createGeometricFactors(data, numerical=True) 
+# k0 = ert.createGeometricFactors(data, numerical=True) 
 
 # plot geometry factor (multiplied by -1)
 ert.show(data, data['k'], logScale=True, label='Geometry factor')
 
 # make a plot of the difference between two approaches
-ert.show(data, vals=100*k0/data['k'], label='Topography effect %',
-        cMap="bwr", logScale=False); #cMin=0.8, cMax=1.25, 
+# ert.show(data, vals=100*k0/data['k'], label='Topography effect %',
+#         cMap="bwr", logScale=False); #cMin=0.8, cMax=1.25, 
 
 # calculate resistivity from resistance (v/i) channel and calculated geometric factor, then plot
 # but for Terrameter LS file, rhoa already calculated, and with no terrain, no new
 # k necessary
 data['rhoa_calc'] = data['r'] * data['k']
 
-# want to start labelling and saving some of these plots...but I can't make it work so far!
+# included this next check which exposed an error with the txt-to-ohm script; kept it for future checks
+# ert.show(data, vals=data['rhoa']/data['rhoa_calc'], label='Comparison of instrument and calculated rho',
+#         cMap="bwr", logScale=False) #, cMin=0.5, cMax=1.50,); # 
+
 # fig = pg.plt.figure()
 # fig.suptitle('Observed apparent resistivity') # Set title
 ert.show(data, data['rhoa'])
 ert.show(data, data['rhoa_calc'])
-ig = plt.gcf()
-fig.suptitle("Observed Apparent Resistivity")
+fig = plt.gcf()
+fig.suptitle("Apparent Resistivity")
 fig.savefig('OptHof_Roll_ObsAppRes.png', dpi=200)
-
-plotkw = dict(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r", cMin=0.2, cMax=200, logScale=True)
-
-invkw = dict(data=data, verbose=True, lam=2, zWeight=0.5, robust=True) # lambda is a smoothness constraint, lower zweight emphasises layering
 
 #%% 
 """
@@ -149,6 +148,13 @@ ert.show(data, data['err']*100, label="error [%]", logScale=False)
 
 # Option to remove points for high noise
 # data.remove(data["err"] >= 5/100 ) # filter extremes?
+
+#%%
+# set up some plotting and inversion keyword dictionaries to make it easier to 
+# keep plotting and processing consistent
+plotkw = dict(xlabel="x (m)", ylabel="z (m)", cMap="Spectral_r", cMin=0.2, cMax=200, logScale=True)
+
+invkw = dict(data=data, verbose=True, lam=2, zWeight=0.5, robust=True) # lambda is a smoothness constraint, lower zweight emphasises layering
 
 #%%
 # call the ERTManager class
@@ -273,7 +279,7 @@ fig = plt.gcf()
 fig.suptitle("Inverted Resistivity model, unconstrained, with a priori column", y=0.8)
 fig.savefig('Unconstrained_Inversion+apriori.png', dpi=200)
 
-
+#%%
 # We want to extract the resistivity from the mesh at the points where 
 # the prior data are available. To this end, we create a list of points
 # (pg.Pos class) and use a forward operator that picks the values from the
@@ -298,15 +304,16 @@ fig = plt.gcf()
 fig.suptitle("Res-depth profile, unconstrained inversion and a priori data")
 fig.savefig('Res-depth_ERTSmooth+apriori.png', dpi=200)
 
+#%%
 # "As alternative to smoothness, we can use a geostatistic model. The 
-# vertical range can be well estimated from the DP data using a variogram 
+# vertical range can be well estimated (?) from the DP data using a variogram 
 # analysis, we guess 8m. For the horizontal one, we can only guess a ten 
 # times higher value.
 mgr.inv.setRegularization(2, correlationLengths=[40, 4])
 mgr.invert()
 
 ax, cb = mgr.showResult(**plotkw)
-ax.set_ylim(-20,0)
+ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
 draw1DColumn(ax, **colkw, **plotkw)
 resGeo = fopDP(mgr.model)
@@ -322,6 +329,7 @@ ax.set_ylabel("depth (m)")
 ax.grid()
 ax.legend()
 
+#%%
 # Only shows subtle changes. An alternative is using the interfaces as
 # constraints as shown earlier. However, we really want to use the 'ground
 # truth' data as inputs for inversion. This is easily accomplished by taking 
@@ -383,6 +391,7 @@ draw1DColumn(ax, **colkw, **plotkw)
 ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
 
+#%%
 # MAYBE there's some improvement? Hard to be sure. Next use geostatistics to
 # extend the influence of the hole data.
 inv.setRegularization(2, correlationLengths=[40, 4])

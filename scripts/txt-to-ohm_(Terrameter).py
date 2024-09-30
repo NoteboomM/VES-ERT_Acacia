@@ -22,7 +22,7 @@ os.chdir("C:/Temp/211269_OptHof_MSNTesting/2024-03-07 OPTHOF-ROLL_LS214100268_19
 #%%
 # open and load txt file; if required later can maybe improve with a prompt or listing?
 
-with open("2024-03-07 OPTHOF-ROLL_GradientXL_2_edited.txt", 'r') as lsfile:
+with open("2024-03-07 OPTHOF-ROLL_GradientXL_2_edited.txt", 'r', errors='ignore') as lsfile:
     # Check the line index number in brackets in next line. This file has data from line 2,
     # so we load 1 onwards (first line is zero). But other example file from Op 't Hof 2024
     # only has data from line 224 onwards, so we would need lsdata = lsfile.readlines()[223:]
@@ -108,9 +108,12 @@ for line in lsdata:
     #              f'{r:<14.5E}{ip:<14.5E}{err:<.5E}\n')
     # else:
     # format parameters for data block in output file without IP
-    lineout=(f'{eleclist.index(a):<5}{eleclist.index(b):<5}'
-             f'{eleclist.index(m):<5}{eleclist.index(n):<5}'
+
+    lineout=(f'{eleclist.index(a)+1:<5}{eleclist.index(b)+1:<5}'
+             f'{eleclist.index(m)+1:<5}{eleclist.index(n)+1:<5}'
              f'{r:<14.5E}{err:<14.5E}{rhoa:<.5E}\n')
+    # Note to self: need to add 1 to each index so that electrodes are not 
+    # zero-indexed, as 0 electrode position is treated as infinite
     
     # append to data block
     datablock += lineout
