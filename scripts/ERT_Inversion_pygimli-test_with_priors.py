@@ -98,12 +98,12 @@ ert.show(data, data['rhoa'])
 ert.show(data, data['rhoa_calc'])
 fig = plt.gcf()
 fig.suptitle("Apparent Resistivity")
-fig.savefig('OptHof_Roll_ObsAppRes.png', dpi=200)
+# fig.savefig('OptHof_Roll_ObsAppRes.png', dpi=200)
 
 #%% 
 """
 ********************
-  OPTIONAL BLOCKS!
+  OPTIONAL CODE BLOCK!
 ********************
 
 # these are a couple of filter statements I've found the Lubango data sometimes 
@@ -134,9 +134,9 @@ ert.show(data)
 """
 #%%
 
-# data['err'] = ert.estimateError(data, # simulate an error field if necessary
-#                                 absoluteUError=0.00005, # 50µV
-#                                 relativeError=0.03)  # 3% 
+data['err_calc'] = ert.estimateError(data, # simulate an error field if necessary
+                                absoluteUError=0.00005, # 50µV
+                                relativeError=0.03)  # 3% 
 
 # Set a minimum error of 0.5% (tiny values mess up the misfit calc/plot later)
 # BUT!!!! using this seems to confuse the ERTManager in the next block;
@@ -145,6 +145,7 @@ ert.show(data)
 
 # plot a pseudosection of the error
 ert.show(data, data['err']*100, label="error [%]", logScale=False)
+ert.show(data, data['err_calc']*100, label="error [%]", logScale=False)
 
 # Option to remove points for high noise
 # data.remove(data["err"] >= 5/100 ) # filter extremes?
@@ -171,21 +172,19 @@ mgr.showFit()
 # fig.suptitle("Comparison of data & inversion response")
 # fig.savefig('OptHof_ObsAppRes.png', dpi=200)
 
-data['misfit'] = pg.log(mgr.inv.response / mgr.data["rhoa"]) / data["err"]
-pg.show(data, data['misfit'], cMap="bwr", cMin = -100, cMax = 100,
-        label='misfit: response/data/err',
-        ) #, cMin=-10, cMax=10
+data['misfit'] = pg.log(mgr.inv.response / data["rhoa"]) / data["err"]
+pg.show(data, data['misfit'], cMap="bwr", cMin = -10, cMax = 10,
+        label='misfit: log(response/data)/err')
 
 # plot inverted section, can change cMap from default 'Spectral_r' (maybe test 
 # viridis or similar for accessibility), set colour max/min, probably specify log 
-# scale, and toy with coverage?
+# scale
 ax, _ = mgr.showResult(**plotkw)
-                       # label='Apparent Resistivity ohm.m, zwt=0.1, lambda=2, NOT robust')#, coverage=.5) # , cMap="viridis") #, cMap="Spectral_r"); #cMin=1, cMax=500, 
 ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
 ax.grid()
 fig = plt.gcf()
-fig.suptitle("Inverted Resistivity model, zwt=0.5, lambda=2, NOT robust", y=0.8)
+fig.suptitle("Inverted Resistivity model, zwt=0.5, lambda=2, robust", y=0.8)
 fig.savefig('Unconstrained_Inversion.png', dpi=200)
 
 #%%
@@ -195,19 +194,19 @@ fig.savefig('Unconstrained_Inversion.png', dpi=200)
 # of interest/surveyed, then add two lines. In this case starting x=25 due to 
 # feature near the beginning of the line that doesn't look like layered earth.
 
-world = mt.createWorld(start=[-50, 0.], end=[190, -50], worldMarker=True)
+world = mt.createParaMeshPLC(data, paraDepth=50, boundary=1)
 # pg.show(world)
 
-line1 = mt.createLine(start=[25, -1], end=[140, -1], marker=2) # marker>0 means it functions as a constraint
+# line1 = mt.createLine(start=[0, -1], end=[140, -1], marker=2) # marker>0 means it functions as a constraint
 
-line2 = mt.createLine(start=[25, -10], end=[140, -10], marker=3) # marker>0 means it functions as a constraint
+line2 = mt.createLine(start=[0, -10], end=[140, -10], marker=3) # marker>0 means it functions as a constraint
 
-world += line1 + line2
+world += line2
 
 pg.show(world)
 
 #%%
-
+"""
 # Load up the list of electrode locations and add nodes to the 'world'...
 eleclist = list(set(pg.x(data)))
 electrodes = np.zeros((len(pg.x(data)),3), dtype=float)
@@ -219,6 +218,9 @@ for p in electrodes:
 
 # ...then create and display a mesh from the world with lines and nodes.
 mesh = pg.meshtools.createMesh(world, quality=34, size=1.)
+"""
+mesh = mt.createMesh(world, quality=34)
+pg.show(mesh, markers=True, showMesh=True)
 
 ax, _ = pg.show(mesh)
 ax.set_ylim(-25,0)
@@ -229,15 +231,15 @@ fig.savefig('LayerMesh.png', dpi=200)
 
 #%%
 # Run the inversion on the 'layered' mesh
-mgrlayers = ert.ERTManager()
-mgrlayers.invert(mesh=mesh, **invkw)
+mgrlayer = ert.ERTManager()
+mgrlayer.invert(mesh=mesh, **invkw)
 
 #%%
 
 # View results of layered inversion
-mgrlayers.showFit()
+mgrlayer.showFit()
 
-ax, _ = mgrlayers.showResult(**plotkw)
+ax, _ = mgrlayer.showResult(**plotkw)
                        # label='Apparent Resistivity ohm.m, zwt=0.2, lambda=10, robust');
 ax.set_ylim(-25,0)
 ax.set_xlim(0,140)
@@ -246,8 +248,8 @@ fig = plt.gcf()
 fig.suptitle("Inverted Resistivity model, zwt=0.5, lambda=2, NOT robust", y=0.8)
 fig.savefig('Inversion_with_layer_boundaries.png', dpi=200)
 
-misfit_layers = pg.log(mgrlayers.inv.response / mgr.data["rhoa"]) / data["err"]
-pg.show(data, misfit_layers, cMap="bwr", cMin=-100, cMax=100, label='misfit: response/data/err')
+misfit_layer = pg.log(mgrlayer.inv.response / data["rhoa"]) / data["err"]
+pg.show(data, misfit_layer, cMap="bwr", cMin=-100, cMax=100, label='misfit: response/data/err')
 
 #%%
 """
