@@ -2,7 +2,7 @@ cmocean==4.0.3
 jedi==0.19.1
 jupyter_server_proxy==4.4.0
 meshio==5.3.5
-numpy==1.26.4
+numpy>=1.26.4,<2.0
 pgcore==1.5.2
 pygimli==1.5.2
 pyvista==0.44.1
