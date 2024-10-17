@@ -7,4 +7,5 @@ With the exception of the 'For_Colab' folder, all files are intended to be used 
 Otherwise, "[exampledata](https://github.com/NoteboomM/VES-ERT_Acacia/tree/master/exampledata)" stores some data files used as inputs and references, and "[working](https://github.com/NoteboomM/VES-ERT_Acacia/tree/master/working)" contains various scratch files and works-in-progress.
 
 Matt Noteboom
+
 Gouda, 17/10/2024
